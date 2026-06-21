@@ -1,0 +1,25 @@
+{
+  "name": "swip-customs-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A production-shaped slice of a cross-border customs compliance pipeline: ingest product data, classify (HS code), assess duty/tax/compliance, route by confidence, human-in-the-loop review.",
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "seed": "tsx src/db/seed.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
+    "drizzle-orm": "^0.38.0",
+    "postgres": "^3.4.5",
+    "zod": "^4.4.3"
+  }
+}
