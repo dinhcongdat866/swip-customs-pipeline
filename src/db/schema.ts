@@ -170,12 +170,25 @@ export const auditLog = pgTable(
  *
  * Two merchants selling the *same* product legitimately share a classification;
  * the same SKU string for *different* products hashes differently and won't hit.
+ *
+ * NOTE on the key: `normalizedTitle` is produced by **deterministic rule-based
+ * cleanup (lowercase, strip punctuation/marketing fluff) — never an LLM**, because
+ * a cache key must be reproducible and an LLM is stochastic. Normalization is kept
+ * conservative on purpose: a cache *miss* is harmless (we just classify again), a
+ * false *hit* is the danger. Unifying differently-worded-but-same products is a
+ * later pgvector/embedding upgrade with its own threshold tradeoff.
+ *
+ * NOTE on staleness: a cached entry was produced by a specific model + prompt, so
+ * we stamp `model`/`promptVersion`. On a model upgrade we either version the key
+ * with them or invalidate, so we never serve an old model's answer as current.
  */
 export const classificationCache = pgTable("classification_cache", {
   key: text("key").primaryKey(), // hash(normalizedTitle + destinationCountry)
   hsCode: text("hs_code").notNull(),
   candidates: jsonb("candidates").$type<Candidate[]>().notNull(),
   confidence: real("confidence"),
+  model: text("model"), // which model produced this — guards against stale cache
+  promptVersion: text("prompt_version"),
   hits: integer("hits").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
