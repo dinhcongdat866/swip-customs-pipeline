@@ -206,4 +206,18 @@ anything we only **read alongside** is jsonb.
   thresholds are named constants on purpose — they're the knob a non-technical
   founder weighs in on ("how cautious?"), not an implementation detail.
 
-### Next: Step 5 — Human-in-the-loop review queue (Next.js UI + the `review/completed` event).
+## Step 5 — Next.js app + human-in-the-loop review queue (done)
+
+- **Two real front doors** (`app/api/shipments`, `app/api/imports`) both call
+  `ingestBatch` — one pipeline, two adapters. `app/api/inngest` is the serve
+  route that lets the Inngest dev server run the durable workflow.
+- **`/dashboard`** — the customer view: shipments as a filtered view of the
+  `status` state machine, with HS code, duty/tax/landed cost, and status colour.
+- **`/review`** — the queue of `needs_review` shipments, each with the AI's
+  top-3. The reviewer picks one (or overrides), which POSTs to `app/api/reviews`.
+- **The review closes the loop without touching the shipment directly:** the
+  endpoint only emits `review/completed`; the paused `classifyShipment` run wakes
+  from `step.waitForEvent`, applies the decision, and writes the audit entry. The
+  workflow owns the state transition — the UI just reports a human acted.
+
+### Next: Step 6 — scaling, cost, and eval-in-CI (the tradeoffs to walk Will through).

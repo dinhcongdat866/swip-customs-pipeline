@@ -63,7 +63,11 @@ This is built in steps; each step is a real design decision documented in
       human review.
 - [x] **Step 4 — Confidence router** (`src/pipeline/route.ts`): auto-clear vs
       human review vs block, with a higher confidence bar for high-value parcels.
-- [ ] **Step 5 — Human-in-the-loop review queue** (Next.js UI).
+- [x] **Step 5 — Next.js app + review queue.** Real ingest endpoints
+      (`/api/shipments`, `/api/imports`), the Inngest serve route, a `/dashboard`
+      view of the `status` state machine, and a `/review` queue where a human
+      picks one of the top-3 — emitting `review/completed` to wake the paused
+      durable workflow.
 - [ ] **Step 6 — Scaling, cost, eval-in-CI.**
 
 ## Run it (local)

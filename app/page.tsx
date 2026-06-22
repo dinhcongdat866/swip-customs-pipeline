@@ -14,7 +14,10 @@ export default function Home() {
           <code>/api/inngest</code> — Inngest serve endpoint (durable pipeline)
         </li>
       </ul>
-      <p>Dashboard and review queue UI come next.</p>
+      <p style={{ display: "flex", gap: 16 }}>
+        <a href="/dashboard">→ Dashboard</a>
+        <a href="/review">→ Review queue</a>
+      </p>
     </main>
   );
 }
