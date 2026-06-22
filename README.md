@@ -54,10 +54,16 @@ This is built in steps; each step is a real design decision documented in
 - [x] **Step 1 — Data model.** Postgres schema: a `shipments` state machine
       surrounded by append-only `classifications` + `audit_log`, and a
       content-addressed classification cache.
-- [ ] **Step 2 — Ingest** (one pipeline, two front doors: CSV upload + API).
-- [ ] **Step 3 — Inngest orchestration** (the 6-step per-shipment workflow).
-- [ ] **Step 4 — Confidence router + risk score.**
-- [ ] **Step 5 — Human-in-the-loop review queue.**
+- [x] **Step 2 — Ingest** (one pipeline, two front doors: CSV + API →
+      `src/ingest.ts`). Deterministic, rule-based title normalization.
+- [x] **Step 3 — Pipeline.** Six thin steps — normalize → classify (real
+      Anthropic, v2 prompt) → duty → tax → compliance → route — as both a plain
+      orchestrator (`src/pipeline/run.ts`) and a **durable Inngest workflow**
+      (`src/inngest/functions.ts`) with per-step retries and `waitForEvent` for
+      human review.
+- [x] **Step 4 — Confidence router** (`src/pipeline/route.ts`): auto-clear vs
+      human review vs block, with a higher confidence bar for high-value parcels.
+- [ ] **Step 5 — Human-in-the-loop review queue** (Next.js UI).
 - [ ] **Step 6 — Scaling, cost, eval-in-CI.**
 
 ## Run it (local)
@@ -67,8 +73,13 @@ pnpm install
 cp .env.example .env        # set DATABASE_URL + ANTHROPIC_API_KEY
 pnpm db:up                  # local Postgres via docker compose
 pnpm db:push                # apply the schema
-pnpm db:studio              # browse the tables
+
+pnpm pipeline               # ingest 3 sample shipments + run the pipeline live
+pnpm db:studio              # browse shipments / classifications / audit_log
 ```
 
-Use a Supabase pooled connection string in `DATABASE_URL` to run against Supabase
-instead — the schema is identical, only the URL changes.
+`pnpm pipeline` runs the plain orchestrator (no Inngest needed) so you can watch
+the six steps against real Anthropic + Postgres. The Inngest version runs the
+same steps durably via the Inngest dev server (wired up with the Next.js app in
+Step 5). Use a Supabase pooled connection string in `DATABASE_URL` to run against
+Supabase instead — the schema is identical, only the URL changes.

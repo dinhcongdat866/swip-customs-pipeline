@@ -181,4 +181,29 @@ old rows stay for before/after comparison, the audit trail is never rewritten.
 drew: anything we **query/filter** (status, hs_code, confidence) is a hard column;
 anything we only **read alongside** is jsonb.
 
-### Next: Step 2 — Ingest (one pipeline, two front doors).
+## Steps 2-4 — Ingest, pipeline, router (done)
+
+- **Ingest** (`src/ingest.ts`) — `ingestBatch` is the single entry both the API
+  and CSV upload use: it persists a `batch` + its `shipments`, then fans out one
+  `shipment/received` event per item. `createBatchWithShipments` is the same
+  persistence without events, used by the CLI demo.
+
+- **The six steps** live as small, pure-ish functions in `src/pipeline/`:
+  `normalize` (deterministic, never an LLM) → `classify` (real Anthropic, the v2
+  prompt ported from the eval study, `temperature: 0`) → `assess` (duty + tax +
+  compliance, deterministic) → `route`.
+
+- **Two orchestrators, same steps.** `src/pipeline/run.ts` is the plain async
+  reference the CLI runs. `src/inngest/functions.ts` wraps the *same* steps in
+  `step.run` so each is a durable checkpoint: a failed Anthropic call retries that
+  step only, a crash resumes from the journal, and `needs_review` pauses the run
+  (via `step.waitForEvent`, up to 3 days) until a human emits `review/completed`.
+  Comparing the two files shows exactly what Inngest adds and what stays the same.
+
+- **The router** (`src/pipeline/route.ts`) is the product thesis in code: a hard
+  compliance flag blocks; otherwise auto-clear above a confidence threshold, with
+  a *higher* bar for high-value parcels; below it, route to a human. The
+  thresholds are named constants on purpose — they're the knob a non-technical
+  founder weighs in on ("how cautious?"), not an implementation detail.
+
+### Next: Step 5 — Human-in-the-loop review queue (Next.js UI + the `review/completed` event).

@@ -8,7 +8,8 @@
     "db:up": "docker compose up -d",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "seed": "tsx src/db/seed.ts"
+    "pipeline": "tsx scripts/run-one.ts",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -18,7 +19,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
+    "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.0",
+    "inngest": "^3.27.0",
     "postgres": "^3.4.5",
     "zod": "^4.4.3"
   }
