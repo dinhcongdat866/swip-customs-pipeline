@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "pipeline": "tsx scripts/run-one.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
