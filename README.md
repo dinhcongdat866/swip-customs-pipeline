@@ -1,9 +1,17 @@
 # swip-customs-pipeline
 
+**▶ Live demo:** [swip-customs-pipeline.vercel.app](https://swip-customs-pipeline.vercel.app) —
+[dashboard](https://swip-customs-pipeline.vercel.app/dashboard) ·
+[review queue](https://swip-customs-pipeline.vercel.app/review)
+
 A production-shaped slice of the **compliance + data infrastructure behind
 cross-border parcel shipping**: ingest raw product data → classify (HS code) →
 assess duty / tax / compliance → route by confidence → human-in-the-loop review →
 a cleared customs declaration.
+
+> The live demo is seeded with realistic data so the link always renders; the
+> classifier itself calls Anthropic for real (see `pnpm pipeline` and the
+> [eval study](https://github.com/dinhcongdat866/hs-code-classifier)).
 
 Built to match the stack in the role (**Next.js · TypeScript · Postgres/Supabase ·
 Inngest · Anthropic**) and to turn the tradeoffs from my written exercise into
