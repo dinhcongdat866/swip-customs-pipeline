@@ -1,3 +1,4 @@
+import "dotenv/config"; // load DATABASE_URL from .env so no shell var is needed
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
