@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+import "./globals.css";
 
 export const metadata = {
   title: "SWIP Customs Pipeline",
@@ -8,8 +10,18 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: "system-ui, sans-serif", margin: 0, padding: "2rem", lineHeight: 1.5 }}>
-        {children}
+      <body>
+        <nav className="nav">
+          <div className="nav-inner">
+            <Link href="/" className="nav-brand">
+              <span>SWIP</span> Pipeline
+            </Link>
+            <Link href="/dashboard" className="nav-link">Dashboard</Link>
+            <Link href="/review" className="nav-link">Review queue</Link>
+            <Link href="/classify" className="nav-link">Try it live</Link>
+          </div>
+        </nav>
+        <div className="container">{children}</div>
       </body>
     </html>
   );

@@ -55,7 +55,14 @@ export interface ClassifyResult {
   latencyMs: number;
 }
 
-const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
+// Lazy so importing this module never throws when ANTHROPIC_API_KEY is unset
+// (e.g. on Vercel, where the live playground passes a per-request key instead).
+let envClient: Anthropic | null = null;
+function getClient(apiKey?: string): Anthropic {
+  if (apiKey) return new Anthropic({ apiKey }); // per-request key from the UI playground
+  if (!envClient) envClient = new Anthropic(); // reads env; throws only if actually used without a key
+  return envClient;
+}
 
 /**
  * Call the model and return the top-3 candidates. `temperature: 0` so the same
@@ -66,13 +73,13 @@ const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
  * (e.g. two-model agreement, candidate spread) rather than trust this number —
  * that's the "confidence-based routing" follow-up from the study.
  */
-export async function classifyWithClaude(input: ClassifyInput): Promise<ClassifyResult> {
+export async function classifyWithClaude(input: ClassifyInput, apiKey?: string): Promise<ClassifyResult> {
   const product = [input.rawTitle, input.rawDescription, input.material && `Material: ${input.material}`]
     .filter(Boolean)
     .join(". ");
 
   const started = Date.now();
-  const res = await anthropic.messages.create({
+  const res = await getClient(apiKey).messages.create({
     model: MODEL,
     max_tokens: 512,
     temperature: 0,
