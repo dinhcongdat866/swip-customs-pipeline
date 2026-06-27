@@ -16,6 +16,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <Link href="/" className="nav-brand">
               <span>SWIP</span> Pipeline
             </Link>
+            <Link href="/pipeline" className="nav-link">How it works</Link>
             <Link href="/dashboard" className="nav-link">Dashboard</Link>
             <Link href="/review" className="nav-link">Review queue</Link>
             <Link href="/classify" className="nav-link">Try it live</Link>
