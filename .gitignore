@@ -6,3 +6,8 @@ node_modules
 dist
 drizzle/meta
 *.log
+tsconfig.tsbuildinfo
+
+# generated: rebuild with `pnpm kb:build` (embeddings) — too big to track
+data/hs-vectors.json
+.cache
