@@ -73,24 +73,48 @@ function getClient(apiKey?: string): Anthropic {
  * (e.g. two-model agreement, candidate spread) rather than trust this number —
  * that's the "confidence-based routing" follow-up from the study.
  */
-export async function classifyWithClaude(input: ClassifyInput, apiKey?: string): Promise<ClassifyResult> {
+export async function classifyWithClaude(
+  input: ClassifyInput,
+  apiKey?: string,
+  // Optional RAG grounding: a retrieved shortlist of likely HS headings. When
+  // present, it's added to the prompt so the model picks from real, relevant
+  // codes (retrieval handles recall; the model handles precision). Kept as a
+  // structural type so this module doesn't depend on the rag layer.
+  grounding?: { code: string; title: string }[],
+): Promise<ClassifyResult> {
   const product = [input.rawTitle, input.rawDescription, input.material && `Material: ${input.material}`]
     .filter(Boolean)
     .join(". ");
 
+  let userContent = `Product: ${product}`;
+  if (grounding?.length) {
+    const list = grounding.map((c) => `${c.code} — ${c.title}`).join("\n");
+    userContent +=
+      `\n\nThe most relevant HS headings for this product, from a vector search over the official heading list (may be imperfect):\n${list}\n\n` +
+      `Prefer one of these if it fits the product's essential character; only pick a different heading if none of them are correct.`;
+  }
+
   const started = Date.now();
   const res = await getClient(apiKey).messages.create({
     model: MODEL,
-    max_tokens: 512,
+    max_tokens: 1024, // grounding + hard cases produce longer output; 512 truncated
     temperature: 0,
     system: SYSTEM,
-    messages: [{ role: "user", content: `Product: ${product}` }],
+    messages: [{ role: "user", content: userContent }],
   });
   const latencyMs = Date.now() - started;
 
   const text = res.content.find((b) => b.type === "text")?.text ?? "";
-  const json = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
-  const parsed = ResponseSchema.parse(JSON.parse(json));
+  const cleaned = text.replace(/```json\s*|\s*```/g, "").trim(); // strip markdown fences if any
+  const json = cleaned.slice(cleaned.indexOf("{"), cleaned.lastIndexOf("}") + 1);
+  let parsed: z.infer<typeof ResponseSchema>;
+  try {
+    parsed = ResponseSchema.parse(JSON.parse(json));
+  } catch {
+    // Most often a truncated response (stop_reason "max_tokens") — surface that
+    // rather than a cryptic JSON error, so the failure is diagnosable.
+    throw new Error(`classifier returned unparseable output (stop_reason=${res.stop_reason}): ${text.slice(0, 160)}…`);
+  }
 
   const inputTokens = res.usage.input_tokens;
   const outputTokens = res.usage.output_tokens;

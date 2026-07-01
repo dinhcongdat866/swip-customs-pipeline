@@ -16,6 +16,7 @@
     "seed:demo": "tsx scripts/seed-demo.ts",
     "kb:build": "tsx scripts/build-kb.ts",
     "rag:test": "tsx scripts/test-retrieve.ts",
+    "rag:compare": "tsx scripts/compare-rag.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
