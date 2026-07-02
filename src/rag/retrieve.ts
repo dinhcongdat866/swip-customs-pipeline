@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { embed } from "./embed.js";
+import { embedQuery } from "./embed.js";
 
 interface KBEntry {
   code: string;
@@ -36,7 +36,7 @@ export interface RetrievedCandidate {
  * relevant codes instead of recalling all ~1,200 from memory.
  */
 export async function retrieveCandidates(productText: string, k = 5): Promise<RetrievedCandidate[]> {
-  const query = await embed(productText);
+  const query = await embedQuery(productText);
   return loadKB()
     .map((e) => ({ code: e.code, title: e.title, score: cosine(query, e.vector) }))
     .sort((a, b) => b.score - a.score)
