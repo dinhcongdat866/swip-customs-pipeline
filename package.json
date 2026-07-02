@@ -17,6 +17,7 @@
     "kb:build": "tsx scripts/build-kb.ts",
     "rag:test": "tsx scripts/test-retrieve.ts",
     "rag:compare": "tsx scripts/compare-rag.ts",
+    "rag:recall": "tsx scripts/recall-at-k.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
