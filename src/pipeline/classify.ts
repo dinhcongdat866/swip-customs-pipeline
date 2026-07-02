@@ -106,14 +106,19 @@ export async function classifyWithClaude(
 
   const text = res.content.find((b) => b.type === "text")?.text ?? "";
   const cleaned = text.replace(/```json\s*|\s*```/g, "").trim(); // strip markdown fences if any
-  const json = cleaned.slice(cleaned.indexOf("{"), cleaned.lastIndexOf("}") + 1);
+  // The model occasionally thinks out loud: a draft JSON, then "wait, let me
+  // reconsider" prose, then the corrected JSON. The LAST candidates object is
+  // its final answer — parse that one, not a span covering all of them.
+  const opens = [...cleaned.matchAll(/\{\s*"candidates"/g)];
+  const start = opens.length ? opens[opens.length - 1]!.index : Math.max(cleaned.indexOf("{"), 0);
+  const json = cleaned.slice(start, cleaned.lastIndexOf("}") + 1);
   let parsed: z.infer<typeof ResponseSchema>;
   try {
     parsed = ResponseSchema.parse(JSON.parse(json));
   } catch {
     // Most often a truncated response (stop_reason "max_tokens") — surface that
     // rather than a cryptic JSON error, so the failure is diagnosable.
-    throw new Error(`classifier returned unparseable output (stop_reason=${res.stop_reason}): ${text.slice(0, 160)}…`);
+    throw new Error(`classifier returned unparseable output (stop_reason=${res.stop_reason}): ${text.slice(0, 1200)}`);
   }
 
   const inputTokens = res.usage.input_tokens;
