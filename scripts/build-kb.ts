@@ -1,25 +1,48 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { embed } from "../src/rag/embed.js";
 
 /**
- * One-time build of the RAG knowledge base: embed every HS heading's description
- * and store the vectors locally (data/hs-vectors.json). Run once:
+ * Build the RAG knowledge base vectors. Two modes:
  *
- *   pnpm kb:build
+ * - If data/enriched-kb.json exists (from `pnpm kb:enrich`): embed each heading
+ *   as MULTIPLE small fragments — one per item phrase, plus one "everyday words"
+ *   string, plus the full title. Several vectors all point at the same code, so
+ *   a single item ("women's trousers") isn't diluted by its 11 siblings.
  *
- * The vectors are what `retrieveCandidates` searches over. Rebuild only when the
- * heading list or the embedding model changes.
+ * - Otherwise: fall back to one vector per full title (the original behavior).
+ *
+ *   pnpm kb:build   →  data/hs-vectors.json
  */
 const headings: Record<string, string> = JSON.parse(readFileSync("data/headings.json", "utf8"));
-const entries = Object.entries(headings);
-console.log(`embedding ${entries.length} HS headings (first run downloads the model)…`);
 
-const kb: { code: string; title: string; vector: number[] }[] = [];
-for (let i = 0; i < entries.length; i++) {
-  const [code, title] = entries[i]!;
-  // Embed the description (the semantic content); the code is just the id.
-  kb.push({ code, title, vector: await embed(title) });
-  if ((i + 1) % 100 === 0) console.log(`  ${i + 1}/${entries.length}`);
+interface Enriched {
+  items: string[];
+  examples: string[];
+}
+const enriched: Record<string, Enriched> | null = existsSync("data/enriched-kb.json")
+  ? JSON.parse(readFileSync("data/enriched-kb.json", "utf8"))
+  : null;
+
+// Assemble the list of (code, text) fragments to embed.
+const fragments: { code: string; text: string }[] = [];
+for (const [code, title] of Object.entries(headings)) {
+  fragments.push({ code, text: title }); // full title always included as a floor
+  const e = enriched?.[code];
+  if (e) {
+    for (const item of e.items) fragments.push({ code, text: item });
+    if (e.examples.length) fragments.push({ code, text: e.examples.join(", ") });
+  }
+}
+console.log(
+  `embedding ${fragments.length} fragments for ${Object.keys(headings).length} headings` +
+    (enriched ? " (enriched)" : " (titles only — run kb:enrich for better recall)"),
+);
+
+const kb: { code: string; text: string; vector: number[] }[] = [];
+for (let i = 0; i < fragments.length; i++) {
+  const f = fragments[i]!;
+  kb.push({ code: f.code, text: f.text, vector: await embed(f.text) });
+  if ((i + 1) % 250 === 0) console.log(`  ${i + 1}/${fragments.length}`);
 }
 
 writeFileSync("data/hs-vectors.json", JSON.stringify(kb));

@@ -15,6 +15,7 @@
     "pipeline": "tsx scripts/run-one.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "kb:build": "tsx scripts/build-kb.ts",
+    "kb:enrich": "tsx scripts/enrich-kb.ts",
     "rag:test": "tsx scripts/test-retrieve.ts",
     "rag:compare": "tsx scripts/compare-rag.ts",
     "rag:recall": "tsx scripts/recall-at-k.ts",
