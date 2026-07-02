@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { retrieveCandidates } from "../src/rag/retrieve.js";
-import { normalizeTitle } from "../src/pipeline/normalize.js";
 
 /**
  * Measure retrieval RECALL@k on the 248 CROSS products: for each product, does
@@ -23,7 +22,10 @@ const misses: Row[] = [];
 console.log(`measuring recall@k over ${data.length} products…`);
 for (let i = 0; i < data.length; i++) {
   const row = data[i]!;
-  const candidates = await retrieveCandidates(normalizeTitle(row.description), maxK);
+  // EXPERIMENT: raw description as the query. normalizeTitle was built for cache
+  // keys (sorts words, strips "fluff") — that destroys phrase order, which
+  // embeddings use. Baseline with normalized queries: 44.8 / 52.4 / 58.9.
+  const candidates = await retrieveCandidates(row.description, maxK);
   const rank = candidates.findIndex((c) => c.code === row.heading); // 0-based; -1 = not found
   for (const k of KS) if (rank >= 0 && rank < k) hits[k]!++;
   if (rank < 0) misses.push(row);
