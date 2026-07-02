@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Candidate } from "../db/schema.js";
 
 export const MODEL = "claude-sonnet-4-6"; // the eval study's accuracy/cost winner
-export const PROMPT_VERSION = "v2";
+export const PROMPT_VERSION = "v2.1"; // v2 + the missing-info ("ask, don't guess") contract
 
 /** USD per million tokens, from the eval study's model table. */
 const PRICE = { inputPerMTok: 3.0, outputPerMTok: 15.0 };
@@ -26,8 +26,10 @@ Rules that are frequently misapplied:
 - Bags, cases, wallets, backpacks and similar containers are 4202 regardless of material.
 - Machines with an individual mechanical function are chapter 84; electrical apparatus 85; measuring/medical/optical instruments 90.
 
+Some descriptions omit the very attribute that DETERMINES the heading — e.g. a garment with no fibre or knit/woven information, a belt or case with no material, a "kit" with no contents. When that happens: still give your best 3 candidates, set confidence LOW (0.5 or less), and put 1-3 short questions for the seller in "missingInfo" — the questions whose answers would decide the heading (e.g. "Knitted or woven?", "What material is it made of?"). If the description is sufficient to classify, "missingInfo" MUST be an empty array.
+
 Return ONLY a JSON object, no prose, in exactly this shape:
-{"candidates":[{"hsCode":"6110","label":"short heading title","reasoning":"one sentence"}],"confidence":0.0}
+{"candidates":[{"hsCode":"6110","label":"short heading title","reasoning":"one sentence"}],"confidence":0.0,"missingInfo":[]}
 where "candidates" has the 3 headings best-first and "confidence" (0..1) is your certainty in the FIRST one.`;
 
 const ResponseSchema = z.object({
@@ -35,6 +37,9 @@ const ResponseSchema = z.object({
     .array(z.object({ hsCode: z.string(), label: z.string().optional(), reasoning: z.string().optional() }))
     .min(1),
   confidence: z.number().min(0).max(1),
+  // Questions for the shipper when a heading-determining attribute is absent
+  // from the input ("ask, don't guess"). Empty = input was sufficient.
+  missingInfo: z.array(z.string()).default([]),
 });
 
 export interface ClassifyInput {
@@ -47,6 +52,7 @@ export interface ClassifyResult {
   candidates: Candidate[];
   hsCode: string; // the chosen (top) candidate
   confidence: number;
+  missingInfo: string[]; // questions to ask the shipper; empty = input sufficed
   model: string;
   promptVersion: string;
   inputTokens: number;
@@ -127,6 +133,7 @@ export async function classifyWithClaude(
     candidates: parsed.candidates,
     hsCode: parsed.candidates[0]!.hsCode,
     confidence: parsed.confidence,
+    missingInfo: parsed.missingInfo,
     model: MODEL,
     promptVersion: PROMPT_VERSION,
     inputTokens,

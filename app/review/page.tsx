@@ -29,6 +29,16 @@ export default async function ReviewQueue() {
           <div className="muted" style={{ fontSize: 14, margin: "4px 0 14px" }}>
             AI confidence {s.hsConfidence?.toFixed(2) ?? "—"} · best guess {s.hsCode ?? "—"}
           </div>
+          {s.status === "needs_info" && (s.missingInfo?.length ?? 0) > 0 && (
+            <div className="card" style={{ background: "rgba(255,180,0,0.07)", marginBottom: 14 }}>
+              <strong style={{ fontSize: 14 }}>Input insufficient — ask the shipper:</strong>
+              <ul style={{ margin: "6px 0 0", paddingLeft: 20, fontSize: 14 }}>
+                {s.missingInfo!.map((q, i) => (
+                  <li key={i}>{q}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <ReviewForm shipmentId={s.id} candidates={candidates} />
         </div>
       ))}

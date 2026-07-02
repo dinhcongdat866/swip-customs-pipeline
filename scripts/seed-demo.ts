@@ -102,7 +102,7 @@ for (let i = 0; i < shipmentIds.length; i++) {
   await saveNormalized(id, normalized);
 
   const r: ClassifyResult = {
-    candidates, hsCode, confidence, model: "claude-sonnet-4-6", promptVersion: "v2",
+    candidates, hsCode, confidence, missingInfo: [], model: "claude-sonnet-4-6", promptVersion: "v2",
     inputTokens: 1180, outputTokens: 90, costUsd: 0.0048, latencyMs: 8600,
   };
   await saveClassification(id, cacheKey(normalized, s.destinationCountry), r);

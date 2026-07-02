@@ -110,6 +110,7 @@ h2 { font-size: 18px; letter-spacing: -0.01em; margin: 24px 0 8px; }
 }
 .badge-cleared { background: #dcfce7; color: var(--green); }
 .badge-needs_review { background: #fef3c7; color: var(--amber); }
+.badge-needs_info { background: #fae8ff; color: #a21caf; }
 .badge-blocked { background: #fee2e2; color: var(--red); }
 .badge-processing, .badge-received { background: #e0e7ff; color: var(--primary); }
 .badge-failed { background: #fee2e2; color: var(--red); }

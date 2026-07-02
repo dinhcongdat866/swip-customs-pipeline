@@ -16,15 +16,20 @@ import {
  * This is a state machine — every Inngest step transitions it, and the
  * customer dashboard + review queue are just filtered views of this column.
  *
- *   received → processing → ( cleared | needs_review | blocked ) | failed
+ *   received → processing → ( cleared | needs_review | needs_info | blocked ) | failed
  *
- * `needs_review` and `blocked` are the two outcomes that protect the customer
- * from a silent wrong classification — the core thesis of the project.
+ * `needs_review`, `needs_info` and `blocked` are the outcomes that protect the
+ * customer from a silent wrong classification — the core thesis of the project.
+ * `needs_info` is the "ask, don't guess" path: the classifier itself reported
+ * that the input lacks a heading-determining attribute, so the right move is to
+ * ask the shipper the stored questions, not to have a human guess from the same
+ * insufficient text.
  */
 export const shipmentStatus = pgEnum("shipment_status", [
   "received",
   "processing",
   "needs_review",
+  "needs_info",
   "cleared",
   "blocked",
   "failed",
@@ -80,6 +85,9 @@ export const shipments = pgTable(
     taxAmount: numeric("tax_amount", { precision: 12, scale: 2 }), // step 5
     totalLandedCost: numeric("total_landed_cost", { precision: 12, scale: 2 }),
     complianceFlags: jsonb("compliance_flags").$type<ComplianceFlag[]>().default([]), // step 6
+    // Questions for the shipper when the classifier reported the input lacks a
+    // heading-determining attribute ("Knitted or woven?"). Empty = sufficient.
+    missingInfo: jsonb("missing_info").$type<string[]>().default([]),
 
     status: shipmentStatus("status").notNull().default("received"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

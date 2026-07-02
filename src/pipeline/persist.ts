@@ -64,6 +64,7 @@ export async function applyResolved(
     source: "auto" | "cache";
     assess: AssessResult;
     status: RouteStatus;
+    missingInfo?: string[];
   },
 ): Promise<void> {
   await db
@@ -71,6 +72,7 @@ export async function applyResolved(
     .set({
       hsCode: v.hsCode,
       hsConfidence: v.confidence,
+      missingInfo: v.missingInfo ?? [],
       classificationSource: v.source,
       dutyAmount: v.assess.dutyAmount.toFixed(2),
       taxAmount: v.assess.taxAmount.toFixed(2),

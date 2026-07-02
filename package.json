@@ -20,6 +20,8 @@
     "rag:compare": "tsx scripts/compare-rag.ts",
     "rag:recall": "tsx scripts/recall-at-k.ts",
     "rag:eval": "tsx scripts/eval-accuracy.ts",
+    "rag:holdout": "tsx scripts/eval-holdout.ts",
+    "rag:askback": "tsx scripts/eval-askback.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

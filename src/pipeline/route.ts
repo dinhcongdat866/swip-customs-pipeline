@@ -13,12 +13,16 @@ export const AUTO_CLEAR_CONFIDENCE = 0.85; // clear without a human above this
 export const HIGH_VALUE_USD = 1000; // expensive parcels demand more certainty
 export const HIGH_VALUE_CONFIDENCE = 0.95; // ...this much, before auto-clearing
 
-export type RouteStatus = "cleared" | "needs_review" | "blocked";
+export type RouteStatus = "cleared" | "needs_review" | "needs_info" | "blocked";
 
 export interface RouteInput {
   confidence: number;
   complianceFlags: ComplianceFlag[];
   lineValueUsd: number;
+  // Classifier-reported questions when the input lacks the attribute that
+  // determines the heading. Validated on the 248-product eval: flagged items
+  // score 46% vs 82% unflagged — the flag is a real signal, not decoration.
+  missingInfo?: string[];
 }
 
 export interface RouteDecision {
@@ -37,6 +41,14 @@ export function route(input: RouteInput): RouteDecision {
   if (input.confidence >= needed) {
     return { status: "cleared", reason: `confidence ${input.confidence} ≥ ${needed}` };
   }
+
+  // 3. "Ask, don't guess": if the classifier itself said the input is missing a
+  // deciding attribute, a human staring at the same insufficient text can't do
+  // better — route to the shipper with the concrete questions instead.
+  if (input.missingInfo?.length) {
+    return { status: "needs_info", reason: `input insufficient — ask shipper: ${input.missingInfo.join(" / ")}` };
+  }
+
   return {
     status: "needs_review",
     reason: `confidence ${input.confidence} < ${needed}${

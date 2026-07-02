@@ -16,14 +16,16 @@ export interface ReviewItem {
 }
 
 /**
- * The review queue: every `needs_review` shipment paired with the AI's top-3
- * candidates (from its most recent classification), so a human can pick one.
+ * The review queue: every `needs_review` and `needs_info` shipment paired with
+ * the AI's top-3 candidates (from its most recent classification). needs_info
+ * cards additionally show the questions to send the shipper — the reviewer can
+ * still resolve them directly once the answers come back.
  */
 export async function listReviewQueue(): Promise<ReviewItem[]> {
   const ships = await db
     .select()
     .from(shipments)
-    .where(eq(shipments.status, "needs_review"))
+    .where(inArray(shipments.status, ["needs_review", "needs_info"]))
     .orderBy(desc(shipments.createdAt));
   if (!ships.length) return [];
 

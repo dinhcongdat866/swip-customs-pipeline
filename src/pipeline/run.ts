@@ -31,6 +31,7 @@ export async function runPipeline(shipmentId: string) {
   // step 2 — classify, reusing the cache when the same product was seen before
   const cached = await lookupCache(key);
   let hsCode: string, confidence: number, source: "auto" | "cache";
+  let missingInfo: string[] = []; // cache hits were classifiable — no questions
   if (cached) {
     hsCode = cached.hsCode;
     confidence = cached.confidence ?? 0;
@@ -41,6 +42,7 @@ export async function runPipeline(shipmentId: string) {
     await saveClassification(shipmentId, key, result);
     hsCode = result.hsCode;
     confidence = result.confidence;
+    missingInfo = result.missingInfo;
     source = "auto";
     await audit(shipmentId, "system:classifier", "classified", {
       hsCode, confidence, model: result.model, costUsd: result.costUsd, candidates: result.candidates,
@@ -55,9 +57,9 @@ export async function runPipeline(shipmentId: string) {
 
   // step 6 — route by confidence + risk
   const lineUsd = lineValueUsd(Number(s.declaredValue ?? 0), s.currency, s.quantity ?? 1);
-  const decision = route({ confidence, complianceFlags: assessment.complianceFlags, lineValueUsd: lineUsd });
+  const decision = route({ confidence, complianceFlags: assessment.complianceFlags, lineValueUsd: lineUsd, missingInfo });
 
-  await applyResolved(shipmentId, { hsCode, confidence, source, assess: assessment, status: decision.status });
+  await applyResolved(shipmentId, { hsCode, confidence, source, assess: assessment, status: decision.status, missingInfo });
   await audit(shipmentId, "system:router", "routed", { status: decision.status, reason: decision.reason });
 
   return { shipmentId, status: decision.status, hsCode, confidence, source, ...assessment, reason: decision.reason };
