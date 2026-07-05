@@ -11,6 +11,8 @@ type Events = {
   "review/completed": {
     data: { shipmentId: string; reviewer: string; chosenHsCode: string; pickedFromCandidates: string; note?: string };
   };
+  /** Manual trigger for the tariff-rules sync (the cron fires it nightly anyway). */
+  "rules/sync.requested": { data: { chapters?: string[] } };
 };
 
 export const inngest = new Inngest({

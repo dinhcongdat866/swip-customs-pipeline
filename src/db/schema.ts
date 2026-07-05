@@ -9,6 +9,7 @@ import {
   jsonb,
   timestamp,
   index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -200,6 +201,60 @@ export const classificationCache = pgTable("classification_cache", {
   hits: integer("hits").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+/**
+ * Live tariff rules, fed by the scheduled sync job (see pipeline/tariff-rules.ts).
+ * One row per rate-bearing HTS line ("6109.10.00" → 16.5%), keyed by destination +
+ * digits-only code. The duty step consults this table first and falls back to the
+ * static reference map, so the sync job *feeds the pipeline* rather than being a
+ * side collection.
+ *
+ * `rateRaw` keeps the source string verbatim ("Free", "16.5%", "32.2¢/kg + 6.5%").
+ * Only unambiguous percentage/Free rates get a `rateParsed`; compound rates stay
+ * null and the lookup ignores them — a rate we can't fully understand must never
+ * silently become a number.
+ */
+export const tariffRules = pgTable(
+  "tariff_rules",
+  {
+    destination: text("destination").notNull(), // ISO-2, 'US'
+    code: text("code").notNull(), // digits only, e.g. '61091000'
+    htsno: text("htsno").notNull(), // original dotted form, '6109.10.00'
+    description: text("description"),
+    rateRaw: text("rate_raw").notNull(),
+    rateParsed: real("rate_parsed"), // 0.165, or null when not auto-usable
+    effectiveFrom: timestamp("effective_from", { withTimezone: true }).defaultNow().notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.destination, t.code] })],
+);
+
+/**
+ * One row per sync-job execution — the "what did the robot change last night"
+ * ledger. Additions and rate changes are auto-applied; *removals never are*: a
+ * code vanishing from the source usually means a restructuring, so those are
+ * parked in `pendingRemovals` for a human. Same safety-gate philosophy as the
+ * confidence router, applied to rules instead of shipments.
+ */
+export const ruleSyncRuns = pgTable("rule_sync_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  source: text("source").notNull(), // 'usitc'
+  destination: text("destination").notNull(), // 'US'
+  status: text("status").notNull(), // 'ok' | 'failed'
+  added: integer("added").notNull().default(0),
+  changed: integer("changed").notNull().default(0),
+  removedPending: integer("removed_pending").notNull().default(0),
+  unparsedRates: integer("unparsed_rates").notNull().default(0),
+  pendingRemovals: jsonb("pending_removals").$type<PendingRemoval[]>().default([]),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export interface PendingRemoval {
+  htsno: string;
+  description?: string;
+  rateRaw?: string;
+}
 
 // --- JSONB payload shapes (typed at the app layer, not enforced by Postgres) ---
 

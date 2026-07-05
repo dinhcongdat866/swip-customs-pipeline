@@ -1,6 +1,7 @@
 import { normalizeTitle, cacheKey } from "./normalize.js";
 import { classifyWithClaude } from "./classify.js";
 import { assess, lineValueUsd } from "./assess.js";
+import { lookupLiveDutyRate } from "./tariff-rules.js";
 import { route } from "./route.js";
 import { FX_TO_USD } from "./reference.js";
 import {
@@ -49,10 +50,11 @@ export async function runPipeline(shipmentId: string) {
     });
   }
 
-  // steps 3-5 — duty, tax, compliance (deterministic)
+  // steps 3-5 — duty, tax, compliance (deterministic; live synced rate when unambiguous)
+  const liveDutyRate = await lookupLiveDutyRate(s.destinationCountry, hsCode);
   const perUnitUsd = Number(s.declaredValue ?? 0) * (FX_TO_USD[s.currency ?? "USD"] ?? 1);
   const assessment = assess({
-    hsCode, declaredValueUsd: perUnitUsd, quantity: s.quantity ?? 1, destinationCountry: s.destinationCountry,
+    hsCode, declaredValueUsd: perUnitUsd, quantity: s.quantity ?? 1, destinationCountry: s.destinationCountry, liveDutyRate,
   });
 
   // step 6 — route by confidence + risk

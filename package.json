@@ -22,6 +22,7 @@
     "rag:eval": "tsx scripts/eval-accuracy.ts",
     "rag:holdout": "tsx scripts/eval-holdout.ts",
     "rag:askback": "tsx scripts/eval-askback.ts",
+    "rules:sync": "tsx scripts/rules-sync.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

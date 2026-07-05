@@ -2,6 +2,7 @@ import { inngest } from "./client.js";
 import { normalizeTitle, cacheKey } from "../pipeline/normalize.js";
 import { classifyWithClaude } from "../pipeline/classify.js";
 import { assess, lineValueUsd } from "../pipeline/assess.js";
+import { lookupLiveDutyRate, fetchChapterRules, applyRulesDiff, DEFAULT_CHAPTERS, type FetchedRule } from "../pipeline/tariff-rules.js";
 import { route } from "../pipeline/route.js";
 import { FX_TO_USD } from "../pipeline/reference.js";
 import {
@@ -52,9 +53,10 @@ export const classifyShipment = inngest.createFunction(
       );
     }
 
-    // steps 3-6 — assess (pure) then route (pure)
+    // steps 3-6 — live-rate lookup (DB read → its own step), then assess + route (pure)
+    const liveDutyRate = await step.run("live-rate", () => lookupLiveDutyRate(s.destinationCountry, hsCode));
     const perUnitUsd = Number(s.declaredValue ?? 0) * (FX_TO_USD[s.currency ?? "USD"] ?? 1);
-    const assessment = assess({ hsCode, declaredValueUsd: perUnitUsd, quantity: s.quantity ?? 1, destinationCountry: s.destinationCountry });
+    const assessment = assess({ hsCode, declaredValueUsd: perUnitUsd, quantity: s.quantity ?? 1, destinationCountry: s.destinationCountry, liveDutyRate });
     const lineUsd = lineValueUsd(Number(s.declaredValue ?? 0), s.currency, s.quantity ?? 1);
     const decision = route({ confidence, complianceFlags: assessment.complianceFlags, lineValueUsd: lineUsd, missingInfo });
 
@@ -83,4 +85,31 @@ export const classifyShipment = inngest.createFunction(
   },
 );
 
-export const functions = [classifyShipment];
+/**
+ * The "rules maintain themselves" loop: nightly cron (or a manual
+ * `rules/sync.requested` event) fetches the official USITC tariff export,
+ * diffs it against the `tariff_rules` table the duty step reads, auto-applies
+ * the safe part (new lines, rate changes) and parks removals for a human.
+ *
+ * Each chapter fetch is its own step: if chapter 64's download flakes, Inngest
+ * retries just that chapter — the ones already fetched replay from the journal.
+ * Timing note: sources publish changes ahead with effective dates, so a nightly
+ * cadence is about picking updates up, not racing them; the staleness window
+ * (max ~24h) is a business dial, not a bug.
+ */
+export const syncTariffRules = inngest.createFunction(
+  { id: "sync-tariff-rules", retries: 2, concurrency: { limit: 1 } },
+  [{ cron: "0 2 * * *" }, { event: "rules/sync.requested" }],
+  async ({ event, step }) => {
+    const chapters: string[] =
+      (event as { data?: { chapters?: string[] } }).data?.chapters ?? DEFAULT_CHAPTERS;
+    const fetched: FetchedRule[] = [];
+    for (const ch of chapters) {
+      fetched.push(...(await step.run(`fetch-${ch}`, () => fetchChapterRules(ch))));
+    }
+    const summary = await step.run("diff-and-apply", () => applyRulesDiff("US", chapters, fetched));
+    return summary;
+  },
+);
+
+export const functions = [classifyShipment, syncTariffRules];

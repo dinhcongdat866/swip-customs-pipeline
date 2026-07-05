@@ -6,6 +6,12 @@ export interface AssessInput {
   declaredValueUsd: number; // per unit, already converted to USD
   quantity: number;
   destinationCountry: string | null;
+  /**
+   * Live rate from the synced tariff_rules table (see tariff-rules.ts), already
+   * resolved by the caller. Only supplied when the lookup was unambiguous;
+   * null/undefined falls back to the static reference map below.
+   */
+  liveDutyRate?: number | null;
 }
 
 export interface AssessResult {
@@ -47,9 +53,11 @@ export function assess(input: AssessInput): AssessResult {
     });
   }
 
-  // --- step 3: duty = lineValue × rate (chapter override or destination default) ---
+  // --- step 3: duty = lineValue × rate (live synced rate when unambiguous,
+  //     else chapter override or destination default) ---
   const rates = DUTY_RATES[dest];
-  const dutyRate = underDeMinimis ? 0 : rates ? rates.byChapter?.[chapter] ?? rates.default : 0;
+  const staticRate = rates ? rates.byChapter?.[chapter] ?? rates.default : 0;
+  const dutyRate = underDeMinimis ? 0 : input.liveDutyRate ?? staticRate;
   const dutyAmount = round2(lineValue * dutyRate);
 
   // --- step 4: tax/VAT applied on (value + duty) ---
