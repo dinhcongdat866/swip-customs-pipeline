@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 # generated: rebuild with `pnpm kb:build` (embeddings) — too big to track
 data/hs-vectors.json
 .cache
+
+# local-only prep docs, not part of the repo
+localDoc/
