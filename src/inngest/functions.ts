@@ -1,6 +1,6 @@
 import { inngest } from "./client.js";
 import { normalizeTitle, cacheKey } from "../pipeline/normalize.js";
-import { classifyWithClaude } from "../pipeline/classify.js";
+import { classifyWithSecondOpinion } from "../pipeline/classify.js";
 import { assess, lineValueUsd } from "../pipeline/assess.js";
 import { lookupLiveDutyRate, fetchChapterRules, applyRulesDiff, DEFAULT_CHAPTERS, type FetchedRule } from "../pipeline/tariff-rules.js";
 import { route } from "../pipeline/route.js";
@@ -42,14 +42,19 @@ export const classifyShipment = inngest.createFunction(
       await step.run("audit-cache", () => audit(shipmentId, "system:cache", "classified", { hsCode, hit: true }));
     } else {
       // The only step that can fail/timeout — Inngest retries just this one.
-      const result = await step.run("classify", () => classifyWithClaude(s));
+      // One step for both model calls: a retry re-runs primary + verifier
+      // together, which is fine (both are read-only API calls, so re-running
+      // is safe — merely re-paid, and only on the retry path).
+      const result = await step.run("classify", () => classifyWithSecondOpinion(s));
       await step.run("save-classification", () => saveClassification(shipmentId, key, result));
       hsCode = result.hsCode;
       confidence = result.confidence;
       missingInfo = result.missingInfo;
       source = "auto";
       await step.run("audit-classify", () =>
-        audit(shipmentId, "system:classifier", "classified", { hsCode, confidence, model: result.model, costUsd: result.costUsd }),
+        audit(shipmentId, "system:classifier", "classified", {
+          hsCode, confidence, model: result.model, costUsd: result.costUsd, verification: result.verification,
+        }),
       );
     }
 

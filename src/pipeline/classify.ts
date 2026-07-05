@@ -1,12 +1,25 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import type { Candidate } from "../db/schema.js";
+import { AUTO_CLEAR_CONFIDENCE } from "./route.js";
 
 export const MODEL = "claude-sonnet-4-6"; // the eval study's accuracy/cost winner
 export const PROMPT_VERSION = "v2.1"; // v2 + the missing-info ("ask, don't guess") contract
 
+/**
+ * Second-opinion model for the two-model agreement check. Deliberately a
+ * DIFFERENT (and cheaper) model: at temperature 0 the same model would just
+ * repeat itself, so independence comes from a different model family.
+ */
+export const VERIFIER_MODEL = "claude-haiku-4-5";
+/** When the two models disagree, confidence is capped here — below every auto-clear threshold. */
+export const DISAGREEMENT_CONFIDENCE = 0.6;
+
 /** USD per million tokens, from the eval study's model table. */
-const PRICE = { inputPerMTok: 3.0, outputPerMTok: 15.0 };
+const PRICES: Record<string, { inputPerMTok: number; outputPerMTok: number }> = {
+  "claude-sonnet-4-6": { inputPerMTok: 3.0, outputPerMTok: 15.0 },
+  "claude-haiku-4-5": { inputPerMTok: 1.0, outputPerMTok: 5.0 },
+};
 
 /**
  * v2 system prompt — ported verbatim from the hs-code-classifier study (the
@@ -48,6 +61,13 @@ export interface ClassifyInput {
   material?: string | null;
 }
 
+/** Outcome of the two-model agreement check (null = check was skipped as unnecessary). */
+export interface Verification {
+  model: string;
+  hsCode: string; // the verifier's independent top pick
+  agreed: boolean; // 4-digit headings match
+}
+
 export interface ClassifyResult {
   candidates: Candidate[];
   hsCode: string; // the chosen (top) candidate
@@ -59,6 +79,7 @@ export interface ClassifyResult {
   outputTokens: number;
   costUsd: number;
   latencyMs: number;
+  verification?: Verification | null;
 }
 
 // Lazy so importing this module never throws when ANTHROPIC_API_KEY is unset
@@ -87,6 +108,7 @@ export async function classifyWithClaude(
   // codes (retrieval handles recall; the model handles precision). Kept as a
   // structural type so this module doesn't depend on the rag layer.
   grounding?: { code: string; title: string }[],
+  model: string = MODEL,
 ): Promise<ClassifyResult> {
   const product = [input.rawTitle, input.rawDescription, input.material && `Material: ${input.material}`]
     .filter(Boolean)
@@ -102,7 +124,7 @@ export async function classifyWithClaude(
 
   const started = Date.now();
   const res = await getClient(apiKey).messages.create({
-    model: MODEL,
+    model,
     max_tokens: 1024, // grounding + hard cases produce longer output; 512 truncated
     temperature: 0,
     system: SYSTEM,
@@ -129,16 +151,55 @@ export async function classifyWithClaude(
 
   const inputTokens = res.usage.input_tokens;
   const outputTokens = res.usage.output_tokens;
+  const price = PRICES[model] ?? PRICES[MODEL]!;
   return {
     candidates: parsed.candidates,
     hsCode: parsed.candidates[0]!.hsCode,
     confidence: parsed.confidence,
     missingInfo: parsed.missingInfo,
-    model: MODEL,
+    model,
     promptVersion: PROMPT_VERSION,
     inputTokens,
     outputTokens,
-    costUsd: (inputTokens * PRICE.inputPerMTok + outputTokens * PRICE.outputPerMTok) / 1_000_000,
+    costUsd: (inputTokens * price.inputPerMTok + outputTokens * price.outputPerMTok) / 1_000_000,
     latencyMs,
+  };
+}
+
+const heading4 = (code: string) => code.replace(/\D/g, "").slice(0, 4);
+
+/**
+ * Two-model agreement check — the "does using two models raise accuracy?"
+ * answer, made concrete. The second model does NOT change the answer: the
+ * primary's top pick is always what we keep. It changes what we DARE to
+ * auto-clear. A model's self-reported confidence is uncalibrated, so before
+ * trusting a high number we ask a cheaper model the same question,
+ * independently; agreement is evidence the product really is unambiguous,
+ * disagreement means "this one is genuinely murky — a human should look".
+ *
+ * Cost discipline: the verifier only runs when the primary is confident enough
+ * to auto-clear (≥ AUTO_CLEAR_CONFIDENCE). Anything already headed for a human
+ * or the shipper gains nothing from a second opinion, so we don't pay for one.
+ */
+export async function classifyWithSecondOpinion(
+  input: ClassifyInput,
+  apiKey?: string,
+  grounding?: { code: string; title: string }[],
+): Promise<ClassifyResult> {
+  const primary = await classifyWithClaude(input, apiKey, grounding);
+  if (primary.confidence < AUTO_CLEAR_CONFIDENCE) {
+    return { ...primary, verification: null }; // already going to a human — skip the check
+  }
+
+  const second = await classifyWithClaude(input, apiKey, grounding, VERIFIER_MODEL);
+  const agreed = heading4(primary.hsCode) === heading4(second.hsCode);
+  return {
+    ...primary,
+    confidence: agreed ? primary.confidence : Math.min(primary.confidence, DISAGREEMENT_CONFIDENCE),
+    inputTokens: primary.inputTokens + second.inputTokens,
+    outputTokens: primary.outputTokens + second.outputTokens,
+    costUsd: primary.costUsd + second.costUsd,
+    latencyMs: primary.latencyMs + second.latencyMs,
+    verification: { model: second.model, hsCode: second.hsCode, agreed },
   };
 }

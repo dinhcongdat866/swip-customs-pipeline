@@ -1,5 +1,5 @@
 import { normalizeTitle, cacheKey } from "./normalize.js";
-import { classifyWithClaude } from "./classify.js";
+import { classifyWithSecondOpinion } from "./classify.js";
 import { assess, lineValueUsd } from "./assess.js";
 import { lookupLiveDutyRate } from "./tariff-rules.js";
 import { route } from "./route.js";
@@ -39,7 +39,7 @@ export async function runPipeline(shipmentId: string) {
     source = "cache";
     await audit(shipmentId, "system:cache", "classified", { hsCode, hit: true });
   } else {
-    const result = await classifyWithClaude(s);
+    const result = await classifyWithSecondOpinion(s);
     await saveClassification(shipmentId, key, result);
     hsCode = result.hsCode;
     confidence = result.confidence;
@@ -47,6 +47,7 @@ export async function runPipeline(shipmentId: string) {
     source = "auto";
     await audit(shipmentId, "system:classifier", "classified", {
       hsCode, confidence, model: result.model, costUsd: result.costUsd, candidates: result.candidates,
+      verification: result.verification, // second opinion: who checked, what they said, agree or not
     });
   }
 
