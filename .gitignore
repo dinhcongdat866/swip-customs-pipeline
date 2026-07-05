@@ -14,3 +14,4 @@ data/hs-vectors.json
 
 # local-only prep docs, not part of the repo
 localDoc/
+/CLAUDE.md
