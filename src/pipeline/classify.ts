@@ -180,6 +180,13 @@ const heading4 = (code: string) => code.replace(/\D/g, "").slice(0, 4);
  * Cost discipline: the verifier only runs when the primary is confident enough
  * to auto-clear (≥ AUTO_CLEAR_CONFIDENCE). Anything already headed for a human
  * or the shipper gains nothing from a second opinion, so we don't pay for one.
+ *
+ * STATUS: not wired into the pipeline. Measured on the 87 auto-clear cases of
+ * the 248-case eval: accuracy 88.5% → 90.2%, 2 real errors caught, 3 false
+ * alarms, 8/10 errors slipped through because both models agreed on the same
+ * wrong heading (correlated errors — same-family models are not independent).
+ * Kept as a reference implementation; the variant worth testing next is a
+ * cross-vendor verifier, whose errors should correlate less.
  */
 export async function classifyWithSecondOpinion(
   input: ClassifyInput,
