@@ -41,9 +41,9 @@ different way, which is why "who is the first customer?" decides the architectur
 | **Broker** | Customs intermediary filing on others' behalf | Shipment data to declare | A valid declaration less likely to be flagged | Legal expertise; needs accuracy + a defensible audit trail |
 
 **Why this matters for V1:** a marketplace-first product optimizes for the batch
-pipeline; a carrier-first product optimizes for low-latency real-time. (This is
-exactly Q1 of the written exercise — "one at a time or batch?" — and the answer
-depends on the first customer.)
+pipeline; a carrier-first product optimizes for low-latency real-time. (The classic
+question — "one at a time or batch?" — and the answer depends on the first
+customer.)
 
 ## Input → Output
 
@@ -90,8 +90,8 @@ outcome), `audit_trail` (the defensible "why/who/when").
 ## Flow
 
 Both "classify one item" and "upload a 50k-row batch" go through the **same**
-pipeline — the difference is only the ingest adapter. (This answers Q1 of the
-written exercise: it's not one-or-the-other, it's one pipeline, two front doors.)
+pipeline — the difference is only the ingest adapter. (Not one-or-the-other:
+one pipeline, two front doors.)
 
 ```
   CSV upload ─┐                          ┌─► customer dashboard (status, export)

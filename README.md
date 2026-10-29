@@ -13,9 +13,8 @@ a cleared customs declaration.
 > classifier itself calls Anthropic for real (see `pnpm pipeline` and the
 > [eval study](https://github.com/dinhcongdat866/hs-code-classifier)).
 
-Built to match the stack in the role (**Next.js · TypeScript · Postgres/Supabase ·
-Inngest · Anthropic**) and to turn the tradeoffs from my written exercise into
-working code instead of prose. It extends my earlier eval study,
+Stack: **Next.js · TypeScript · Postgres/Supabase · Inngest · Anthropic**. Built to
+turn design tradeoffs into working code instead of prose. It extends my earlier eval study,
 [`hs-code-classifier`](https://github.com/dinhcongdat866/hs-code-classifier),
 from an offline measurement into a real workflow.
 

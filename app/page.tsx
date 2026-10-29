@@ -19,7 +19,7 @@ export default function Home() {
       </div>
 
       <p className="muted" style={{ fontSize: 13, marginTop: 20 }}>
-        Built to match the stack in the role: Next.js · TypeScript · Postgres/Supabase · Inngest · Anthropic.
+        Stack: Next.js · TypeScript · Postgres/Supabase · Inngest · Anthropic.
       </p>
     </main>
   );
