@@ -68,7 +68,7 @@ interface UsitcRow {
 /** Fetch one chapter's rate-bearing lines from the USITC export endpoint. */
 export async function fetchChapterRules(chapter: string): Promise<FetchedRule[]> {
   const url = `${USITC_EXPORT}?from=${chapter}01&to=${chapter}99&format=JSON&styles=false`;
-  const res = await fetch(url, { headers: { "User-Agent": "swip-customs-pipeline/0.1" } });
+  const res = await fetch(url, { headers: { "User-Agent": "customs-pipeline/0.1" } });
   if (!res.ok) throw new Error(`USITC export ${chapter}: HTTP ${res.status}`);
   const rows = (await res.json()) as UsitcRow[];
 

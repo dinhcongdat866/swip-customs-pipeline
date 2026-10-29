@@ -25,7 +25,7 @@ After this, the Supabase Table Editor shows `shipments`, `classifications`, etc.
 ## 3. Deploy on Vercel
 
 1. [vercel.com](https://vercel.com) → **Add New → Project** → import
-   `dinhcongdat866/swip-customs-pipeline` from GitHub.
+   `dinhcongdat866/customs-pipeline` from GitHub.
 2. **Environment Variables** → add `DATABASE_URL` = the same Supabase pooler URI.
 3. **Deploy.** Then open `https://<your-app>.vercel.app/dashboard`.
 

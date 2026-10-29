@@ -1,17 +1,16 @@
-# SWIP Customs Pipeline — System Design
+# Customs Pipeline — System Design
 
 A production-shaped slice of a cross-border customs compliance pipeline. It turns
 the offline eval study in [`hs-code-classifier`](../hs-code-classifier) into a
 real workflow: ingest product data → classify → assess duty/tax/compliance →
 route by confidence → human-in-the-loop review → cleared declaration.
 
-> Built to match SWIP's stack (Next.js · TypeScript · Postgres/Supabase ·
-> Inngest · Anthropic) and to make the tradeoffs in my written exercise concrete
-> in code rather than prose.
+> Stack: Next.js · TypeScript · Postgres/Supabase · Inngest · Anthropic. Built to
+> make the design tradeoffs concrete in code rather than prose.
 
 ## The problem in one frame
 
-Every parcel crossing a border needs a valid customs declaration. SWIP takes raw
+Every parcel crossing a border needs a valid customs declaration. A customs-compliance platform takes raw
 product data from marketplaces/carriers/merchants and returns that declaration —
 classified, duty-and-tax assessed, compliance-checked — **fast, accurate, cheap,
 at the scale of millions of parcels.** Success = balancing speed, accuracy, cost.
@@ -30,11 +29,11 @@ is only step 1:
 
 ## Who the customers are
 
-SWIP sells to anyone in the cross-border chain: goods flow **merchant → marketplace
+Such a platform serves anyone in the cross-border chain: goods flow **merchant → marketplace
 → carrier → broker → customs**. Each pulls the speed/accuracy/cost triangle a
 different way, which is why "who is the first customer?" decides the architecture.
 
-| Actor | Who | Gives SWIP | Gets back | Constraint that shapes design |
+| Actor | Who | Gives the platform | Gets back | Constraint that shapes design |
 |---|---|---|---|---|
 | **Merchant** | A seller/brand (a Shopify store) | Product catalog: title, description, value, origin | HS code + duty estimate so the parcel clears; landed cost at checkout | Knows the product, **not the customs code**. Low volume, one item at a time. Legally responsible if the declaration is wrong |
 | **Marketplace** | Aggregator of many merchants (Amazon, Rakuten, Shopee) | **Millions** of SKUs from thousands of sellers — messy, inconsistent | Classification at scale, to show duty-inclusive (DDP) prices and generate docs | Huge scale + dirty data + **doesn't own product knowledge**. Needs **batch async, high throughput, cheap per SKU** |

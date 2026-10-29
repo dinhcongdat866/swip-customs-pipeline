@@ -3,7 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata = {
-  title: "SWIP Customs Pipeline",
+  title: "Customs Pipeline",
   description: "Cross-border customs compliance pipeline",
 };
 
@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <nav className="nav">
           <div className="nav-inner">
             <Link href="/" className="nav-brand">
-              <span>SWIP</span> Pipeline
+              <span>Customs</span> Pipeline
             </Link>
             <Link href="/pipeline" className="nav-link">How it works</Link>
             <Link href="/dashboard" className="nav-link">Dashboard</Link>
