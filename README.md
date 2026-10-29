@@ -1,8 +1,8 @@
 # customs-pipeline
 
-**▶ Live demo:** [customs-pipeline.vercel.app](https://customs-pipeline.vercel.app) —
-[dashboard](https://customs-pipeline.vercel.app/dashboard) ·
-[review queue](https://customs-pipeline.vercel.app/review)
+**▶ Live demo:** [swip-customs-pipeline.vercel.app](https://swip-customs-pipeline.vercel.app) —
+[dashboard](https://swip-customs-pipeline.vercel.app/dashboard) ·
+[review queue](https://swip-customs-pipeline.vercel.app/review)
 
 A production-shaped slice of the **compliance + data infrastructure behind
 cross-border parcel shipping**: ingest raw product data → classify (HS code) →
